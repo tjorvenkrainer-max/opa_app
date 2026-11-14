@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Opa-Sprechhilfe</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- 1. EINRICHTEN: Kamera-Vorschau und Start (für die Familie) -->
+  <section id="einrichten" class="seite">
+    <h1>👁️ Opa-Sprechhilfe</h1>
+    <div class="einrichten-inhalt">
+      <div class="vorschau-spalte">
+        <canvas id="vorschau" width="640" height="360"></canvas>
+        <div id="vorschauHinweis" class="hinweis">Kamera startet …</div>
+        <button id="btnKameraNeu" class="knopf klein-knopf versteckt">🎥 Kamera erneut versuchen</button>
+        <p class="klein">Das Bild ist gespiegelt wie ein Spiegel. Es bleibt auf diesem Laptop.</p>
+      </div>
+      <div class="knopf-spalte">
+        <ol class="schritte">
+          <li>Laptop so drehen, dass das Gesicht groß und gerade im Bild ist.</li>
+          <li>Für gutes Licht auf dem Gesicht sorgen (kein Fenster im Rücken).</li>
+          <li>Kalibrieren – danach starten.</li>
+        </ol>
+        <div id="kalibStatus" class="klein"></div>
+        <button id="btnStart" class="knopf gross">▶ Starten</button>
+        <button id="btnKalibrieren" class="knopf">🎯 Kalibrieren</button>
+        <button id="btnOhneKamera" class="knopf">⌨️ Ohne Kamera starten (Pfeiltasten)</button>
+        <button id="btnEinstellungenE" class="knopf">⚙️ Einstellungen</button>
+        <a class="knopf verweis" href="sprechtafel/">👆 Sprechtafel zum Tippen (mit Sprachausgabe)</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. KALIBRIERUNG: Opa schaut nacheinander in alle Richtungen -->
+  <section id="kalibrierung" class="seite versteckt">
+    <div id="kalibZiel" class="kalib-ziel pos-mitte">
+      <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="ring-spur" cx="50" cy="50" r="44"></circle>
+        <circle class="ring-wert" cx="50" cy="50" r="44"></circle>
+      </svg>
+      <span id="kalibPfeil" class="emoji">⏺️</span>
+    </div>
+    <div class="kalib-mitte">
+      <div id="kalibText" class="kalib-text">Kalibrierung</div>
+      <div id="kalibUnter" class="klein"></div>
+      <div id="kalibKnoepfe">
+        <button id="btnKalibLos" class="knopf gross">▶ Los (Leertaste)</button>
+        <button id="btnKalibAbbruch" class="knopf">Abbrechen (Esc)</button>
+      </div>
+      <div id="kalibErgebnis" class="versteckt">
+        <ul id="kalibListe"></ul>
+        <button id="btnKalibOk" class="knopf gross">✔ Übernehmen und starten</button>
+        <button id="btnKalibNochmal" class="knopf">🔁 Wiederholen</button>
+        <button id="btnKalibZurueck" class="knopf">Abbrechen</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. TAFEL: der Satz oben, vier Felder an den Rändern, Mitte neutral -->
+  <section id="tafel" class="seite versteckt">
+    <div id="satz" class="satz"><span id="satzText"></span></div>
+
+    <div id="felder" class="felder">
+      <button class="feld hoch" id="feld-links" data-richtung="links"></button>
+      <button class="feld quer" id="feld-oben" data-richtung="oben"></button>
+      <div id="mitte">
+        <div id="satzMitte" class="satz-mitte"></div>
+        <div id="mittePunkt"></div>
+        <div id="mitteText"></div>
+        <div id="debug" class="versteckt">
+          <canvas id="debugBild" width="240" height="135"></canvas>
+          <canvas id="debugSignal" width="135" height="135"></canvas>
+          <pre id="debugText"></pre>
+        </div>
+      </div>
+      <button class="feld quer" id="feld-unten" data-richtung="unten"></button>
+      <button class="feld hoch" id="feld-rechts" data-richtung="rechts"></button>
+    </div>
+
+    <!-- Schmale Leiste für die Familie -->
+    <div class="leiste">
+      <button id="btnHeim" title="Zurück zum Start (Esc)">🏠 Start</button>
+      <button id="btnPause" title="Pause / Weiter (Leertaste)">⏸ Pause</button>
+      <button id="btnAndere" title="Andere Vorschläge zeigen (Taste N)">🔄 Andere Vorschläge</button>
+      <span id="statusKi" class="status"></span>
+      <span id="statusKamera" class="status"></span>
+      <span class="luecke"></span>
+      <button id="btnVerlauf">🕘 Verlauf</button>
+      <button id="btnDebug">🐞 Debug</button>
+      <button id="btnEinrichten">🎥 Einrichten</button>
+      <button id="btnEinstellungen">⚙️ Einstellungen</button>
+      <button id="btnVollbild">⛶ Vollbild</button>
+    </div>
+  </section>
+
+  <!-- 4. ANZEIGE: JA / NEIN oder der fertige Satz, bildschirmfüllend -->
+  <div id="anzeige" class="versteckt">
+    <div id="anzeigeEmoji"></div>
+    <div id="anzeigeText"></div>
+    <div id="anzeigeHinweis" class="klein"></div>
+  </div>
+
+  <!-- EINSTELLUNGEN -->
+  <div id="einstellungen" class="ueberlagerung versteckt">
+    <form class="dialog" id="formEinstellungen">
+      <h2>⚙️ Einstellungen</h2>
+
+      <fieldset>
+        <legend>KI-Vorschläge (Claude)</legend>
+        <label>API-Key
+          <input type="password" id="eApiKey" autocomplete="off" placeholder="sk-ant-…">
+        </label>
+        <label>Modell
+          <input type="text" id="eModell" autocomplete="off">
+        </label>
+        <div class="zeile">
+          <button type="button" id="btnKiTest" class="knopf klein-knopf">Verbindung testen</button>
+          <span id="kiTestText" class="klein"></span>
+        </div>
+        <p class="klein">Der Key wird nur in diesem Browser gespeichert. Ohne Key läuft die App mit dem festen Wortbaum. An die KI geht nur der Satz als Text, nie ein Kamerabild.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Blicksteuerung</legend>
+        <label>Verweildauer: <output id="aVerweil"></output> Sekunden
+          <input type="range" id="eVerweil" min="1" max="4" step="0.25">
+        </label>
+        <p class="klein">Empfindlichkeit je Richtung (höher = ein kleinerer Blick genügt):</p>
+        <div class="raster">
+          <label>Links <output id="aLinks"></output><input type="range" id="eLinks" min="1" max="10" step="1"></label>
+          <label>Rechts <output id="aRechts"></output><input type="range" id="eRechts" min="1" max="10" step="1"></label>
+          <label>Oben <output id="aOben"></output><input type="range" id="eOben" min="1" max="10" step="1"></label>
+          <label>Unten <output id="aUnten"></output><input type="range" id="eUnten" min="1" max="10" step="1"></label>
+        </div>
+        <button type="button" id="btnNeuKalib" class="knopf klein-knopf">🎯 Neu kalibrieren</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>Familie</legend>
+        <label>Namen (eine Zeile pro Person, z.&nbsp;B. „Anna (Tochter)“)
+          <textarea id="eNamen" rows="4"></textarea>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Anzeige</legend>
+        <label>Schriftgröße: <output id="aSchrift"></output> %
+          <input type="range" id="eSchrift" min="0.7" max="1.4" step="0.05">
+        </label>
+        <label class="haken"><input type="checkbox" id="eObenAnderes">
+          Feld OBEN zeigt „➕ Anderes“ statt eines dritten Vorschlags
+        </label>
+        <label class="haken"><input type="checkbox" id="eSatzMitte">
+          Satz in der Mitte anzeigen statt oben
+        </label>
+      </fieldset>
+
+      <div class="zeile ende">
+        <button type="button" id="btnEAbbruch" class="knopf klein-knopf">Abbrechen</button>
+        <button type="submit" class="knopf klein-knopf haupt">Speichern</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- VERLAUF -->
+  <div id="verlauf" class="ueberlagerung versteckt">
+    <div class="dialog">
+      <h2>🕘 Die letzten 10 Sätze</h2>
+      <ol id="verlaufListe"></ol>
+      <div class="zeile ende">
+        <button type="button" id="btnVerlaufLeeren" class="knopf klein-knopf">Verlauf löschen</button>
+        <button type="button" id="btnVerlaufZu" class="knopf klein-knopf haupt">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unsichtbares Kamerabild für die Erkennung -->
+  <video id="video" playsinline muted></video>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

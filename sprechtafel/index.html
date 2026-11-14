@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <!-- Auf dem iPad "Zum Home-Bildschirm" -> öffnet sich wie eine App ohne Adressleiste -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Sprechtafel">
+  <!-- Private Seite: Suchmaschinen sollen sie nicht aufnehmen -->
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sprechtafel</title>
+  <style>
+    /* Sprechtafel zum Tippen: große farbige Felder, dunkler Hintergrund,
+       keine Animationen. Alles in einer Datei, damit man sie leicht kopieren
+       oder ins Internet stellen kann. */
+    :root {
+      --schwarz: #000;
+      --text: #fff;
+      --grau: #a9b4ca;
+      --gelb: #ffd60a;
+      /* Farbe je Satzart */
+      --habe: #8f1d1d;
+      --wo: #8a4a0c;
+      --moechte: #17508f;
+      --bin: #5a2a94;
+      --familie: #94215f;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; height: 100%; background: var(--schwarz); color: var(--text);
+      font-family: -apple-system, "Segoe UI", Arial, Helvetica, sans-serif;
+      overflow: hidden; overscroll-behavior: none;
+      -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    }
+    button { font: inherit; color: inherit; border: 0; margin: 0; cursor: pointer; touch-action: manipulation; }
+
+    #app {
+      height: 100vh; height: 100dvh;
+      display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto;
+      gap: 1.2vmin;
+      padding: max(1.2vmin, env(safe-area-inset-top)) max(1.2vmin, env(safe-area-inset-right))
+               max(1.2vmin, env(safe-area-inset-bottom)) max(1.2vmin, env(safe-area-inset-left));
+    }
+
+    /* Oben: der zuletzt gesprochene Satz, groß zum Mitlesen */
+    #leiste { display: flex; gap: 1.2vmin; align-items: stretch; min-height: 11vmin; }
+    #satz {
+      flex: 1; min-width: 0; display: flex; align-items: center; padding: 0 2.5vmin;
+      background: #101829; border: 0.5vmin solid #3c4b70; border-radius: 2vmin;
+      font-size: clamp(22px, 5.2vmin, 60px); font-weight: 800; line-height: 1.1;
+    }
+    #satz.leer { color: #5c6988; font-weight: 500; }
+    #satz.spricht { border-color: var(--gelb); }
+    .rund {
+      flex: 0 0 auto; width: 13vmin; border-radius: 2vmin; background: #1a2540; border: 0.5vmin solid #3c4b70;
+      font-size: clamp(20px, 5vmin, 54px); display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .rund small { font-size: clamp(11px, 1.7vmin, 18px); color: var(--grau); font-weight: 600; }
+    #btnEinstellungen { width: 8vmin; font-size: clamp(16px, 3.4vmin, 36px); color: var(--grau); }
+
+    /* Reiter (Themen) */
+    #reiter { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1vmin; }
+    .reiter {
+      padding: 1.2vmin 0.5vmin; border-radius: 1.8vmin; background: #131b2e; border: 0.5vmin solid #2c3859;
+      display: flex; flex-direction: column; align-items: center; gap: 0.3vmin;
+      font-size: clamp(13px, 2.3vmin, 26px); font-weight: 700; color: var(--grau);
+    }
+    .reiter .bild { font-size: clamp(20px, 4vmin, 44px); line-height: 1.1; }
+    .reiter.aktiv { background: #2a3760; border-color: var(--gelb); color: var(--text); }
+
+    /* Raster mit den Sätzen */
+    #raster { display: grid; gap: 1.2vmin; min-height: 0; grid-auto-rows: minmax(0, 1fr); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    #raster.viele { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    @media (orientation: portrait) {
+      #raster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #raster.viele { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    .kachel {
+      min-width: 0; min-height: 0; overflow: hidden; padding: 1.2vmin; border-radius: 2.4vmin;
+      border: 0.7vmin solid rgba(255, 255, 255, 0.28);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6vmin; text-align: center;
+    }
+    .kachel .bild { font-size: clamp(30px, 9vmin, 100px); line-height: 1.05; }
+    .kachel .klein { font-size: clamp(13px, 2.5vmin, 28px); font-weight: 600; opacity: 0.85; }
+    .kachel .gross { font-size: clamp(20px, 4.6vmin, 52px); font-weight: 800; line-height: 1.08; }
+    /* Viele Sätze auf einer Seite: Bild links, Text rechts, etwas kleiner */
+    #raster.viele .kachel { flex-direction: row; gap: 1.4vmin; text-align: left; justify-content: flex-start; padding-left: 1.8vmin; }
+    #raster.viele .kachel .bild { font-size: clamp(26px, 6.5vmin, 72px); }
+    #raster.viele .kachel .gross { font-size: clamp(17px, 3.6vmin, 40px); }
+    #raster.viele .kachel .klein { font-size: clamp(12px, 2.1vmin, 22px); }
+    .kachel .worte { min-width: 0; display: flex; flex-direction: column; gap: 0.3vmin; }
+    /* Hochformat: Felder sind breit und flach -> immer Bild links, Text rechts */
+    @media (orientation: portrait) {
+      #raster .kachel { flex-direction: row; gap: 2vmin; text-align: left; justify-content: flex-start; padding-left: 2.2vmin; }
+      #raster:not(.viele) .kachel .bild { font-size: clamp(30px, 8.5vmin, 96px); }
+      .fest { font-size: clamp(20px, 4.6vmin, 52px); gap: 1vmin; white-space: nowrap; }
+    }
+
+    .art-habe { background: var(--habe); }
+    .art-wo { background: var(--wo); }
+    .art-moechte { background: var(--moechte); }
+    .art-bin { background: var(--bin); }
+    .art-familie { background: var(--familie); }
+    /* Das Feld, das gerade gesprochen wird */
+    .spricht { border-color: var(--gelb) !important; }
+
+    /* Unten: immer sichtbar */
+    #fest { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.2vmin; }
+    .fest {
+      padding: 2vmin 1vmin; border-radius: 2.4vmin; border: 0.7vmin solid rgba(255, 255, 255, 0.28);
+      font-size: clamp(24px, 6.5vmin, 72px); font-weight: 900;
+      display: flex; align-items: center; justify-content: center; gap: 1.5vmin;
+    }
+    #btnJa { background: #14692f; }
+    #btnNein { background: #a02018; }
+    #btnHilfe { background: #9a6a00; }
+
+    /* Einstellungen */
+    #einstellungen {
+      position: fixed; inset: 0; z-index: 10; background: rgba(0, 0, 0, 0.88);
+      display: flex; align-items: center; justify-content: center; padding: 3vmin;
+    }
+    #einstellungen.versteckt { display: none; }
+    .dialog {
+      width: min(640px, 100%); max-height: 100%; overflow: auto; background: #0d1424;
+      border: 2px solid #4a5a80; border-radius: 16px; padding: 22px; font-size: 20px;
+      -webkit-user-select: text; user-select: text;
+    }
+    .dialog h2 { margin: 0 0 14px; font-size: 28px; }
+    .dialog label { display: block; margin: 14px 0 6px; font-weight: 700; }
+    .dialog select, .dialog input[type="range"] { width: 100%; font: inherit; }
+    .dialog select { padding: 10px; background: #060a14; color: #fff; border: 1px solid #4a5a80; border-radius: 8px; }
+    .dialog input[type="range"] { accent-color: var(--gelb); height: 36px; }
+    .dialog p { color: var(--grau); font-size: 17px; line-height: 1.4; }
+    .dialog .knoepfe { display: flex; gap: 12px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+    .dialog button { padding: 14px 22px; border-radius: 12px; background: #1a2540; border: 2px solid #4a5a80; font-size: 20px; font-weight: 700; }
+    .dialog button.haupt { background: #14692f; border-color: #30d158; }
+    #hinweisStimme { color: var(--gelb); }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="leiste">
+      <div id="satz" class="leer">Tippe auf ein Feld</div>
+      <button id="btnNochmal" class="rund" aria-label="Noch einmal sagen">🔊<small>Nochmal</small></button>
+      <button id="btnEinstellungen" class="rund" aria-label="Einstellungen">⚙️</button>
+    </div>
+    <div id="reiter"></div>
+    <div id="raster"></div>
+    <div id="fest">
+      <button id="btnJa" class="fest">✅ JA</button>
+      <button id="btnNein" class="fest">❌ NEIN</button>
+      <button id="btnHilfe" class="fest">🔔 HILFE</button>
+    </div>
+  </div>
+
+  <div id="einstellungen" class="versteckt">
+    <div class="dialog">
+      <h2>⚙️ Stimme</h2>
+      <label for="eStimme">Stimme</label>
+      <select id="eStimme"></select>
+      <div id="hinweisStimme"></div>
+      <label for="eTempo">Sprechtempo: <span id="aTempo"></span></label>
+      <input type="range" id="eTempo" min="0.6" max="1.2" step="0.05">
+      <p>Wenn nichts zu hören ist: Lautstärke am Gerät hochdrehen und beim iPad die Stummschaltung ausschalten.</p>
+      <div class="knoepfe">
+        <button id="btnTest">🔊 Testen</button>
+        <button id="btnZu" class="haupt">Fertig</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ------------------------------------------------------------------
+    // DIE SÄTZE. Hier kann man einfach Zeilen ändern, löschen oder ergänzen.
+    // habe('Schmerzen', '😣')  ->  Feld "Schmerzen", gesprochen "Ich habe Schmerzen"
+    // Mit einem dritten Wert kann man den gesprochenen Satz selbst festlegen.
+    // ------------------------------------------------------------------
+    const gross = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+    const feld = (art, vor) => (wort, bild, sag) => ({ art, bild, klein: vor, gross: gross(wort), sag: sag || `${vor} ${wort}` });
+    const habe = feld('habe', 'Ich habe');
+    const mirIst = feld('habe', 'Mir ist');
+    const moechte = feld('moechte', 'Ich möchte');
+    const bin = feld('bin', 'Ich bin');
+    const wo = feld('wo', 'Schmerzen');
+    const frei = (art, text, bild) => ({ art, bild, klein: '', gross: text, sag: text });
+
+    const THEMEN = [
+      {
+        name: 'Wichtig', bild: '⭐',
+        felder: [
+          habe('Schmerzen', '😣'),
+          habe('Durst', '🥤'),
+          habe('Hunger', '🍽️'),
+          mirIst('zu heiß', '🥵'),
+          mirIst('zu kalt', '🥶'),
+          moechte('aufrechter liegen', '🛏️'),
+          bin('müde', '😴'),
+          moechte('auf die Toilette', '🚽'),
+        ],
+      },
+      {
+        name: 'Ich habe', bild: '😣',
+        felder: [
+          habe('Schmerzen', '😣'),
+          habe('Durst', '🥤'),
+          habe('Hunger', '🍽️'),
+          mirIst('zu heiß', '🥵'),
+          mirIst('zu kalt', '🥶'),
+          habe('Angst', '😨'),
+          habe('Atemnot', '😮‍💨'),
+          mirIst('übel', '🤢'),
+          habe('Juckreiz', '🐜'),
+          habe('einen trockenen Mund', '👄'),
+          habe('Husten', '😷'),
+          habe('eine Frage', '❓'),
+        ],
+      },
+      {
+        name: 'Wo?', bild: '📍',
+        felder: [
+          wo('im Kopf', '🤕'),
+          wo('im Hals', '🧣'),
+          wo('in der Brust', '🫁'),
+          wo('im Bauch', '🫃'),
+          wo('im Rücken', '🦴'),
+          wo('am Gesäß', '🪑'),
+          wo('im Arm', '💪'),
+          wo('im Bein', '🦵'),
+          wo('am Fuß', '🦶'),
+          wo('im Mund', '👄'),
+          wo('an der Nase', '👃'),
+          wo('überall', '🧍'),
+        ],
+      },
+      {
+        name: 'Ich möchte', bild: '👉',
+        felder: [
+          moechte('aufrechter liegen', '🛏️'),
+          moechte('flacher liegen', '⬇️'),
+          moechte('gedreht werden', '🔄'),
+          moechte('schlafen', '😴'),
+          moechte('eine Decke', '🛌'),
+          moechte('ein Kissen', '☁️'),
+          moechte('auf die Toilette', '🚽'),
+          moechte('meine Brille', '👓'),
+          moechte('Ruhe', '🤫'),
+          moechte('das Licht an', '💡'),
+          moechte('das Licht aus', '🌙'),
+          moechte('die Pflege rufen', '👩‍⚕️'),
+        ],
+      },
+      {
+        name: 'Ich bin', bild: '🙂',
+        felder: [
+          bin('müde', '😴'),
+          bin('traurig', '😢'),
+          bin('froh', '😊'),
+          bin('unruhig', '😟'),
+          bin('nass', '💧'),
+          bin('verwirrt', '😵‍💫'),
+          bin('einsam', '🧍'),
+          bin('zufrieden', '😌'),
+        ],
+      },
+      {
+        name: 'Familie', bild: '❤️',
+        felder: [
+          frei('familie', 'Danke', '🙏'),
+          frei('familie', 'Ich hab dich lieb', '❤️'),
+          frei('familie', 'Bleib bei mir', '🤝'),
+          frei('familie', 'Halt meine Hand', '✋'),
+          frei('familie', 'Ich vermisse euch', '💭'),
+          frei('familie', 'Wie geht es dir?', '🙂'),
+          frei('familie', 'Erzähl mir etwas', '💬'),
+          frei('familie', 'Komm bald wieder', '👋'),
+        ],
+      },
+    ];
+
+    // ------------------------------------------------------------------
+    // Ab hier: Technik
+    // ------------------------------------------------------------------
+    const $ = (id) => document.getElementById(id);
+    const SPEICHER = 'opa.tafel';
+    let einstellungen = { stimme: '', tempo: 0.9 };
+    try {
+      einstellungen = { ...einstellungen, ...JSON.parse(localStorage.getItem(SPEICHER) || '{}') };
+    } catch { /* gespeicherte Werte unlesbar: Standard nehmen */ }
+    const speichere = () => {
+      try { localStorage.setItem(SPEICHER, JSON.stringify(einstellungen)); } catch { /* egal */ }
+    };
+
+    let stimmen = []; // deutsche Stimmen des Geräts
+    let letzterSatz = '';
+    let letzterTipp = 0;
+    let aktuelleAusgabe = null; // Verweis behalten, sonst meldet iOS das Ende manchmal nicht
+    const kannSprechen = 'speechSynthesis' in window;
+
+    function ladeStimmen() {
+      if (!kannSprechen) return;
+      stimmen = speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith('de'));
+      // de-DE zuerst, dann Österreich/Schweiz
+      stimmen.sort((a, b) => Number(b.lang.toLowerCase().includes('de-de') || b.lang.toLowerCase().includes('de_de')) -
+                             Number(a.lang.toLowerCase().includes('de-de') || a.lang.toLowerCase().includes('de_de')));
+      const auswahl = $('eStimme');
+      auswahl.replaceChildren(
+        new Option('Automatisch (Deutsch)', ''),
+        ...stimmen.map((v) => new Option(`${v.name} (${v.lang})`, v.name))
+      );
+      auswahl.value = stimmen.some((v) => v.name === einstellungen.stimme) ? einstellungen.stimme : '';
+      $('hinweisStimme').textContent = !kannSprechen
+        ? 'Dieser Browser kann nicht vorlesen.'
+        : stimmen.length ? '' : 'Keine deutsche Stimme gefunden. Das Gerät liest dann mit seiner Standardstimme.';
+    }
+
+    // Spricht den Satz laut aus und zeigt ihn oben groß an.
+    function sprich(text, element) {
+      const jetzt = Date.now();
+      if (jetzt - letzterTipp < 350) return; // Schutz vor Doppel-Tippen
+      letzterTipp = jetzt;
+      letzterSatz = text;
+
+      const satz = $('satz');
+      satz.textContent = text;
+      satz.classList.remove('leer');
+      document.querySelectorAll('.spricht').forEach((el) => el.classList.remove('spricht'));
+      if (!kannSprechen) return;
+
+      if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+      const ausgabe = new SpeechSynthesisUtterance(text);
+      ausgabe.lang = 'de-DE';
+      const stimme = stimmen.find((v) => v.name === einstellungen.stimme) || stimmen[0];
+      if (stimme) {
+        ausgabe.voice = stimme;
+        ausgabe.lang = stimme.lang;
+      }
+      ausgabe.rate = einstellungen.tempo;
+      ausgabe.volume = 1;
+      const markiert = [satz, element].filter(Boolean);
+      markiert.forEach((el) => el.classList.add('spricht'));
+      const fertig = () => {
+        if (aktuelleAusgabe === ausgabe) markiert.forEach((el) => el.classList.remove('spricht'));
+      };
+      ausgabe.onend = fertig;
+      ausgabe.onerror = fertig;
+      aktuelleAusgabe = ausgabe;
+      speechSynthesis.speak(ausgabe);
+    }
+
+    // Schrift eines Feldes so weit verkleinern, bis das Wort hineinpasst.
+    function passeAn() {
+      for (const k of document.querySelectorAll('.kachel')) {
+        const wort = k.querySelector('.gross');
+        wort.style.fontSize = '';
+        let px = parseFloat(getComputedStyle(wort).fontSize);
+        let runden = 0;
+        while ((k.scrollHeight > k.clientHeight + 1 || k.scrollWidth > k.clientWidth + 1) && px > 12 && runden++ < 40) {
+          px *= 0.94;
+          wort.style.fontSize = `${px}px`;
+        }
+      }
+    }
+    window.addEventListener('resize', passeAn);
+
+    // Reiter und Felder zeichnen
+    let aktivesThema = 0;
+    function zeigeThema(nr) {
+      aktivesThema = nr;
+      [...$('reiter').children].forEach((el, i) => el.classList.toggle('aktiv', i === nr));
+      const thema = THEMEN[nr];
+      const raster = $('raster');
+      raster.classList.toggle('viele', thema.felder.length > 8);
+      raster.replaceChildren(
+        ...thema.felder.map((f) => {
+          const k = document.createElement('button');
+          k.className = `kachel art-${f.art}`;
+          k.innerHTML = '<span class="bild"></span><span class="worte"><span class="klein"></span><span class="gross"></span></span>';
+          k.querySelector('.bild').textContent = f.bild;
+          k.querySelector('.klein').textContent = f.klein;
+          k.querySelector('.gross').textContent = f.gross;
+          k.addEventListener('click', () => sprich(f.sag, k));
+          return k;
+        })
+      );
+      passeAn();
+    }
+
+    function baue() {
+      $('reiter').replaceChildren(
+        ...THEMEN.map((t, i) => {
+          const r = document.createElement('button');
+          r.className = 'reiter';
+          r.innerHTML = '<span class="bild"></span><span class="name"></span>';
+          r.querySelector('.bild').textContent = t.bild;
+          r.querySelector('.name').textContent = t.name;
+          r.addEventListener('click', () => zeigeThema(i));
+          return r;
+        })
+      );
+      zeigeThema(0);
+
+      $('btnJa').addEventListener('click', (e) => sprich('Ja', e.currentTarget));
+      $('btnNein').addEventListener('click', (e) => sprich('Nein', e.currentTarget));
+      $('btnHilfe').addEventListener('click', (e) => sprich('Ich brauche Hilfe', e.currentTarget));
+      $('btnNochmal').addEventListener('click', () => {
+        if (letzterSatz) {
+          letzterTipp = 0;
+          sprich(letzterSatz, null);
+        }
+      });
+
+      // Einstellungen
+      const zeigeTempo = () => ($('aTempo').textContent = `${Math.round($('eTempo').value * 100)} %`);
+      $('btnEinstellungen').addEventListener('click', () => {
+        ladeStimmen();
+        $('eTempo').value = einstellungen.tempo;
+        zeigeTempo();
+        $('einstellungen').classList.remove('versteckt');
+      });
+      $('eTempo').addEventListener('input', () => {
+        einstellungen.tempo = Number($('eTempo').value);
+        zeigeTempo();
+        speichere();
+      });
+      $('eStimme').addEventListener('change', () => {
+        einstellungen.stimme = $('eStimme').value;
+        speichere();
+      });
+      $('btnTest').addEventListener('click', () => {
+        letzterTipp = 0;
+        sprich('Ich habe Schmerzen', null);
+      });
+      $('btnZu').addEventListener('click', () => $('einstellungen').classList.add('versteckt'));
+    }
+
+    baue();
+
+    // Online (https): Seite auf dem Gerät ablegen, damit sie auch ohne
+    // Internet startet. Lokal am Laptop bewusst nicht, damit Änderungen an
+    // den Sätzen sofort sichtbar sind.
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+
+    if (kannSprechen) {
+      ladeStimmen();
+      speechSynthesis.addEventListener?.('voiceschanged', ladeStimmen); // Stimmen kommen oft verzögert
+    }
+  </script>
+</body>
+</html>

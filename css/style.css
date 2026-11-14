@@ -1,0 +1,234 @@
+/* Opa-Sprechhilfe: dunkel, sehr hoher Kontrast, riesige Schrift.
+   Bewusst ohne Animationen – nur der Fortschrittsring bewegt sich. */
+
+:root {
+  --schrift: 1;            /* Faktor aus den Einstellungen */
+  --schwarz: #000;
+  --feld: #0e1626;
+  --feld-blick: #1d2c4a;
+  --rand: #4a5a80;
+  --text: #fff;
+  --grau: #9aa6bd;
+  --gelb: #ffd60a;
+  --gruen: #30d158;
+  --rot: #ff5a4f;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--schwarz);
+  color: var(--text);
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+  overflow: hidden;
+}
+
+.versteckt { display: none !important; }
+.klein { font-size: 1.9vh; color: var(--grau); line-height: 1.35; }
+
+.seite { position: fixed; inset: 0; }
+
+/* ---------- Knöpfe für die Familie ---------- */
+.knopf {
+  font: inherit;
+  font-size: 2.4vh;
+  padding: 1.4vh 2vh;
+  color: var(--text);
+  background: #1a2540;
+  border: 2px solid var(--rand);
+  border-radius: 1.2vh;
+  cursor: pointer;
+}
+.knopf:hover { border-color: var(--text); }
+.knopf:disabled { opacity: 0.4; cursor: default; }
+.knopf.gross { font-size: 3.2vh; font-weight: 700; background: #14532d; border-color: var(--gruen); }
+.knopf.haupt { background: #14532d; border-color: var(--gruen); }
+.klein-knopf { font-size: 2vh; padding: 1vh 1.6vh; }
+a.verweis { display: block; text-align: center; text-decoration: none; }
+
+/* ---------- 1. Einrichten ---------- */
+#einrichten { padding: 3vh 4vw; overflow: auto; }
+#einrichten h1 { font-size: 5vh; margin: 0 0 2.5vh; }
+.einrichten-inhalt { display: flex; gap: 4vw; align-items: flex-start; }
+.vorschau-spalte { flex: 1 1 55%; }
+#vorschau { width: 100%; aspect-ratio: 16 / 9; background: #111; border: 2px solid var(--rand); border-radius: 1.2vh; }
+.hinweis { font-size: 3.2vh; font-weight: 700; margin-top: 1.5vh; padding: 1.2vh 1.6vh; border-radius: 1vh; background: #3a2a00; color: var(--gelb); }
+.hinweis.ok { background: #0f3d22; color: var(--gruen); }
+.hinweis.fehler { background: #45130f; color: var(--rot); }
+.knopf-spalte { flex: 1 1 40%; display: flex; flex-direction: column; gap: 1.6vh; }
+.schritte { font-size: 2.3vh; line-height: 1.5; margin: 0 0 1vh; padding-left: 3vh; color: #dfe6f5; }
+
+/* ---------- 2. Kalibrierung ---------- */
+#kalibrierung { background: var(--schwarz); }
+.kalib-mitte {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 56vw; text-align: center; display: flex; flex-direction: column; gap: 2vh; align-items: center;
+}
+.kalib-text { font-size: calc(var(--schrift) * 8vh); font-weight: 800; line-height: 1.1; }
+#kalibKnoepfe, #kalibErgebnis { display: flex; flex-direction: column; gap: 1.4vh; align-items: center; }
+#kalibListe { list-style: none; padding: 0; margin: 0 0 1vh; font-size: 2.8vh; text-align: left; line-height: 1.6; }
+.kalib-ziel {
+  position: absolute; width: 24vh; height: 24vh;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--gelb); border-radius: 50%;
+}
+.kalib-ziel .emoji { font-size: 12vh; line-height: 1; }
+.kalib-ziel .ring-spur { stroke: rgba(0, 0, 0, 0.25); }
+.kalib-ziel .ring-wert { stroke: #000; }
+.kalib-ziel.pos-mitte  { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.kalib-ziel.pos-links  { left: 15vh; top: 50%; transform: translate(-50%, -50%); }
+.kalib-ziel.pos-rechts { left: calc(100% - 15vh); top: 50%; transform: translate(-50%, -50%); }
+.kalib-ziel.pos-oben   { left: 50%; top: 14vh; transform: translate(-50%, -50%); }
+.kalib-ziel.pos-unten  { left: 50%; top: calc(100% - 14vh); transform: translate(-50%, -50%); }
+/* Beim Schritt "Mitte" sitzt der Kreis in der Bildschirmmitte; der Text rückt nach unten */
+#kalibrierung.schritt-mitte .kalib-mitte { top: 82%; }
+#kalibrierung.vorher .kalib-ziel { display: none; }
+
+/* ---------- 3. Tafel ---------- */
+#tafel { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+
+.satz {
+  height: 16vh; padding: 0 2vw;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; overflow: hidden;
+  font-size: calc(var(--schrift) * 9vh); font-weight: 800; line-height: 1.05;
+  border-bottom: 2px solid #26324f;
+}
+.satz .leer { color: #4d5a78; font-weight: 400; }
+
+.felder {
+  display: grid;
+  grid-template-columns: 30fr 40fr 30fr;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 1.2vh; padding: 1.2vh; min-height: 0;
+}
+#feld-links  { grid-column: 1; grid-row: 1 / 4; }
+#feld-oben   { grid-column: 2; grid-row: 1; }
+#mitte       { grid-column: 2; grid-row: 2; }
+#feld-unten  { grid-column: 2; grid-row: 3; }
+#feld-rechts { grid-column: 3; grid-row: 1 / 4; }
+
+.feld {
+  font: inherit; color: var(--text);
+  background: var(--feld);
+  border: 0.6vh solid var(--rand);
+  border-radius: 2.4vh;
+  display: flex; align-items: center; justify-content: center;
+  gap: 2vh; padding: 1.5vh; min-width: 0; min-height: 0; overflow: hidden;
+  cursor: pointer; text-align: center;
+}
+.feld.hoch { flex-direction: column; }
+.feld.quer { flex-direction: row; }
+
+/* Das Feld, auf dem die App den Blick vermutet */
+.feld.blick { background: var(--feld-blick); border-color: var(--gelb); }
+
+.feld.art-leer { visibility: hidden; }
+.feld.art-laden { color: var(--grau); border-style: dashed; cursor: default; }
+.feld.art-ja, .feld.art-fertig { border-color: var(--gruen); background: #0c2417; }
+.feld.art-nein { border-color: var(--rot); background: #2a0f0d; }
+.feld.art-zurueck, .feld.art-anderes { border-color: #7b869e; background: #141a26; }
+.feld.art-ja.blick, .feld.art-fertig.blick { background: #145a32; border-color: var(--gelb); }
+.feld.art-nein.blick { background: #5a1c17; border-color: var(--gelb); }
+.feld.art-zurueck.blick, .feld.art-anderes.blick { background: #2a3550; border-color: var(--gelb); }
+
+/* Emoji mit Fortschrittsring */
+.ring-box { position: relative; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
+.feld.hoch .ring-box { width: 25vh; height: 25vh; }
+.feld.quer .ring-box { width: 17vh; height: 17vh; }
+.feld.hoch .emoji { font-size: 13vh; line-height: 1; }
+.feld.quer .emoji { font-size: 8.5vh; line-height: 1; }
+
+.ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 9; }
+.ring-spur { stroke: #26324f; }
+.ring-wert { stroke: var(--gelb); stroke-linecap: butt; stroke-dasharray: 276.46; stroke-dashoffset: 276.46; }
+
+.wort {
+  font-size: calc(var(--schrift) * 4.6vw);
+  font-weight: 800; line-height: 1.08;
+  min-width: 0; max-width: 100%;
+}
+.feld.quer .wort { flex: 0 1 auto; }
+.feld.gross .wort { font-size: calc(var(--schrift) * 7vw); }
+
+/* Mitte: neutral. Nur ein ruhiger Punkt und kleine Hinweise. */
+#mitte {
+  position: relative; min-width: 0; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2vh;
+}
+#mittePunkt { width: 3.4vh; height: 3.4vh; border-radius: 50%; background: #3a4560; }
+#mittePunkt.bereit { background: var(--gruen); }
+#mitteText { font-size: 2.6vh; color: var(--grau); min-height: 3.2vh; text-align: center; }
+.satz-mitte { display: none; font-size: calc(var(--schrift) * 5.5vh); font-weight: 800; text-align: center; line-height: 1.1; padding: 0 1vw; }
+
+/* Einstellung "Satz in der Mitte" */
+body.satz-in-mitte #satz { display: none; }
+body.satz-in-mitte .satz-mitte { display: block; }
+
+#debug { display: flex; gap: 1vh; align-items: center; font-size: 1.5vh; }
+#debug canvas { border: 1px solid var(--rand); height: 18vh; width: auto; }
+#debugText { margin: 0; color: #cfe; font-family: Consolas, monospace; font-size: 1.9vh; line-height: 1.3; }
+body.debug-an #mittePunkt, body.debug-an .satz-mitte { display: none; }
+
+/* Leiste für die Familie: klein und unauffällig */
+.leiste {
+  display: flex; align-items: center; gap: 1vh; padding: 0.6vh 1.2vh;
+  border-top: 1px solid #1c2640; background: #05080f;
+  font-size: 1.7vh; color: var(--grau);
+}
+.leiste button {
+  font: inherit; color: var(--grau); background: #10182a;
+  border: 1px solid #2a3654; border-radius: 0.8vh; padding: 0.6vh 1.1vh; cursor: pointer;
+}
+.leiste button:hover { color: var(--text); border-color: var(--grau); }
+.leiste .luecke { flex: 1; }
+.leiste .status { padding: 0 0.8vh; white-space: nowrap; }
+.leiste .status.gut { color: var(--gruen); }
+.leiste .status.warnung { color: var(--gelb); }
+
+/* ---------- 4. Anzeige (JA / NEIN / fertiger Satz) ---------- */
+#anzeige {
+  position: fixed; inset: 0; z-index: 20; background: var(--schwarz);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3vh; padding: 4vh 4vw; text-align: center; overflow: hidden; cursor: pointer;
+}
+#anzeigeEmoji { font-size: 16vh; line-height: 1.1; flex: 0 0 auto; }
+#anzeigeText { font-size: calc(var(--schrift) * 18vh); font-weight: 800; line-height: 1.08; max-width: 100%; }
+#anzeige.kurz #anzeigeEmoji { font-size: 30vh; }
+#anzeige.kurz #anzeigeText { font-size: 34vh; }
+#anzeige.ja { background: #06240f; }
+#anzeige.nein { background: #2a0907; }
+#anzeigeHinweis { position: absolute; bottom: 2vh; left: 0; right: 0; }
+
+/* ---------- Überlagerungen (Einstellungen, Verlauf) ---------- */
+.ueberlagerung {
+  position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, 0.85);
+  display: flex; align-items: center; justify-content: center; padding: 3vh;
+}
+.dialog {
+  width: min(900px, 92vw); max-height: 94vh; overflow: auto;
+  background: #0d1424; border: 2px solid var(--rand); border-radius: 1.6vh; padding: 2.5vh 3vh;
+  font-size: 2.1vh;
+}
+.dialog h2 { margin: 0 0 1.5vh; font-size: 3.2vh; }
+.dialog fieldset { border: 1px solid #2a3654; border-radius: 1vh; margin: 0 0 1.6vh; padding: 1.2vh 1.6vh; }
+.dialog legend { color: var(--gelb); font-weight: 700; padding: 0 0.6vh; }
+.dialog label { display: block; margin: 0.8vh 0; }
+.dialog input[type="text"], .dialog input[type="password"], .dialog textarea {
+  display: block; width: 100%; margin-top: 0.4vh; font: inherit; padding: 0.8vh 1vh;
+  color: var(--text); background: #060a14; border: 1px solid var(--rand); border-radius: 0.6vh;
+}
+.dialog input[type="range"] { display: block; width: 100%; margin-top: 0.4vh; accent-color: var(--gelb); }
+.dialog .raster { display: grid; grid-template-columns: 1fr 1fr; gap: 0 3vh; }
+.dialog .haken { display: flex; gap: 1vh; align-items: center; }
+.dialog .haken input { width: 2.4vh; height: 2.4vh; accent-color: var(--gelb); }
+.zeile { display: flex; gap: 1.2vh; align-items: center; flex-wrap: wrap; }
+.zeile.ende { justify-content: flex-end; }
+#verlaufListe { font-size: 2.8vh; line-height: 1.5; padding-left: 4vh; }
+#verlaufListe .zeit { color: var(--grau); font-size: 1.9vh; margin-left: 1vh; }
+
+/* Kamerabild: wird gebraucht, soll aber nicht zu sehen sein */
+#video { position: fixed; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
